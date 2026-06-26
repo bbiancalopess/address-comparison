@@ -1,0 +1,13 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+
+# Saídas geradas
+data/results.csv
+reports/evaluation_results.csv   # 3.8 MB, regerável com app/evaluate.py
+# data/membership_functions.png e os gráficos em reports/ são versionados
+# de propósito: o README e o relatório os exibem.

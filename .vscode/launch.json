@@ -1,0 +1,14 @@
+{
+    "configurations": [
+        {
+            "name": "Run main",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "app.main",
+            "args": [
+                "Rua Mauro Coura Macedo 226 Paquetá",
+                "Mauro COura Macedo 224 Paquetá"
+            ]
+        }
+    ]
+}
