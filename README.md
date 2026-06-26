@@ -42,7 +42,7 @@ lida nativamente com noções vagas como "rua *parecida*" ou "número *próximo*
 | **Variáveis linguísticas** | `street`, `number`, `city`, `cep` (entradas) e `final` (saída) |
 | **Termos / conjuntos fuzzy** | `baixa`, `média`, `alta`, `igual`, `próximo`, … |
 | **Funções de pertinência** | triangulares (`trimf`) — ver gráfico abaixo |
-| **Base de regras** | 22 regras `SE … ENTÃO …` em [`app/rules.py`](app/rules.py) |
+| **Base de regras** | 20 regras `SE … ENTÃO …` em [`app/rules.py`](app/rules.py) |
 | **Operador E (AND)** | mínimo (padrão Mamdani) |
 | **Inferência de Mamdani** | implicação por mínimo, agregação por máximo |
 | **Defuzzificação** | **centroide** (centro de gravidade) |
@@ -113,18 +113,23 @@ fuzzy_address_matcher/
 │   ├── normalizer.py      # lowercase, sem acentos, abreviações, pontuação
 │   ├── parser.py          # decompõe o endereço em campos (regex + heurística)
 │   ├── similarity.py      # similaridade por campo (RapidFuzz + regras de nº/CEP)
-│   ├── rules.py           # base de 22 regras fuzzy (como dados)
+│   ├── rules.py           # base de 20 regras fuzzy (como dados)
 │   ├── fuzzy_engine.py    # sistema Mamdani (scikit-fuzzy) + calibração
 │   ├── explainability.py  # classificação textual + explicação
 │   ├── viz.py             # gráficos das funções de pertinência
 │   ├── batch.py           # comparação em lote via CSV + benchmark
+│   ├── metrics.py         # métricas binárias (acurácia, F1, AUC, ROC)
+│   ├── evaluate.py        # avaliação sobre base rotulada + relatório
 │   ├── streamlit_app.py   # interface visual (opcional)
 │   ├── api.py             # API REST (FastAPI)
 │   └── main.py            # orquestração + CLI/demonstração
 ├── tests/
 │   └── test_cases.py      # testes automatizados (pytest)
 ├── data/
-│   └── sample_addresses.csv
+│   ├── sample_addresses.csv
+│   └── modified_addresses.csv   # base rotulada (pares positivos)
+├── reports/                     # saídas de app/evaluate.py
+│   └── evaluation_report.md
 ├── requirements.txt
 └── README.md
 ```
@@ -198,6 +203,38 @@ python app/batch.py data/sample_addresses.csv data/results.csv
 python app/viz.py
 ```
 
+### Avaliação de eficácia (base rotulada)
+
+Mede o quão bem o sistema separa pares **iguais** de **diferentes** sobre a
+base `data/modified_addresses.csv` (que já traz positivos e negativos
+rotulados na coluna `label`). Negativos "fáceis" extras podem ser gerados por
+embaralhamento. Produz métricas (acurácia, precisão, recall, F1, AUC),
+detalhamento por tipo de erro e gráficos em `reports/`.
+
+```bash
+python app/evaluate.py                    # base completa (~14k pares, ~16s)
+python app/evaluate.py --sample 2000      # amostra rápida
+python app/evaluate.py --jobs 4           # nº de processos paralelos
+python app/evaluate.py --extra-negatives 0  # usar só os negativos da base
+```
+
+Saídas:
+
+- `reports/evaluation_report.md` — relatório completo
+- `reports/evaluation_results.csv` — resultado par a par
+- `reports/{score_distribution,roc_curve,confusion_matrix,per_error_accuracy}.png`
+
+A base inclui **negativos difíceis reais** (`NUMERO_ALTERADO`): mesma rua,
+bairro, cidade e CEP, mudando **apenas o número** — como o número é decisivo na
+identidade do endereço, esses pares são diferentes (`label=0`). Negativos
+"fáceis" extras são gerados por embaralhamento (controlável por
+`--extra-negatives`).
+
+Resultado na base completa (7.000 positivos + 7.000 negativos): **AUC 0.981**,
+**F1 0.980**, acurácia **98.0%** (limiar ótimo: score ≥ 57). O acerto na
+categoria mais difícil (`NUMERO_ALTERADO`) é **94,3%**. Veja
+[reports/evaluation_report.md](reports/evaluation_report.md).
+
 ### Testes
 
 ```bash
@@ -264,16 +301,20 @@ Resposta JSON da API:
 
 ### Exemplos de regras
 
+O **número é decisivo**: as classes altas só são alcançadas com `numero É igual`;
+um número `proximo` ou `diferente` limita o resultado a `media` ou menos, mesmo
+que rua, cidade e CEP coincidam.
+
 ```
-SE rua É alta E numero É igual           ENTÃO similaridade É muito_alta
-SE rua É alta E cidade É alta            ENTÃO similaridade É alta
-SE cep É igual                           ENTÃO similaridade É muito_alta
-SE rua É alta E numero É diferente       ENTÃO similaridade É media
-SE rua É baixa                           ENTÃO similaridade É baixa
-SE rua É baixa E cidade É baixa          ENTÃO similaridade É muito_baixa
+SE rua É alta E numero É igual E cep É igual    ENTÃO similaridade É muito_alta
+SE rua É alta E numero É igual                  ENTÃO similaridade É alta
+SE rua É alta E numero É diferente              ENTÃO similaridade É media
+SE cep É igual E numero É diferente             ENTÃO similaridade É media
+SE rua É baixa                                  ENTÃO similaridade É baixa
+SE rua É baixa E cidade É baixa                 ENTÃO similaridade É muito_baixa
 ```
 
-A base completa (22 regras) está em [`app/rules.py`](app/rules.py).
+A base completa (20 regras) está em [`app/rules.py`](app/rules.py).
 
 ---
 

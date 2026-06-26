@@ -8,4 +8,6 @@ venv/
 
 # Saídas geradas
 data/results.csv
-# data/membership_functions.png é versionado de propósito: o README o exibe.
+reports/evaluation_results.csv   # 3.8 MB, regerável com app/evaluate.py
+# data/membership_functions.png e os gráficos em reports/ são versionados
+# de propósito: o README e o relatório os exibem.

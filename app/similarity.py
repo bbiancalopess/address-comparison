@@ -65,11 +65,17 @@ def _text_similarity(a: str, b: str) -> float:
 def _number_similarity(a: str, b: str) -> float:
     """Similaridade de números de logradouro.
 
-    * iguais            -> 100
-    * ambos ausentes    -> 100 (sem informação contraditória)
-    * um ausente        -> 50 (incerteza)
-    * diferentes        -> decai com a distância relativa entre os valores,
-                           de forma que 1000 vs 1001 seja "próximo".
+    O número da casa é **decisivo** na identidade de um endereço: dois imóveis
+    na mesma rua com números diferentes são lugares diferentes. Por isso a
+    similaridade é praticamente binária:
+
+    * iguais (ou ambos "S/N", ausentes) -> 100  (faixa "igual")
+    * um ausente                        -> 50   (incerteza, faixa "próximo")
+    * diferentes                        -> decai rápido a partir de ~60, de
+                                           modo que QUALQUER diferença caia fora
+                                           da faixa "igual" (>=70). Off-by-1 fica
+                                           em "próximo" (~60); diferenças maiores
+                                           caem em "diferente".
     """
     a = (a or "").strip()
     b = (b or "").strip()
@@ -83,13 +89,15 @@ def _number_similarity(a: str, b: str) -> float:
     da = "".join(ch for ch in a if ch.isdigit())
     db = "".join(ch for ch in b if ch.isdigit())
     if da and db:
-        na, nb = int(da), int(db)
-        diff = abs(na - nb)
-        scale = max(na, nb, 1)
-        # diferença de 1 em ~1000 -> ~99.9; diferença grande -> próximo de 0.
-        return max(0.0, 100.0 * (1.0 - diff / scale))
-    # caem aqui números com letras (ex.: "12a"): usa similaridade textual.
-    return fuzz.ratio(a, b)
+        diff = abs(int(da) - int(db))
+        if diff == 0:
+            return 100.0
+        # off-by-1 -> 60 ("próximo"); decai até ~0 em diff>=10. Nunca >=70,
+        # então um número diferente jamais é tratado como "igual".
+        return max(0.0, 60.0 * (1.0 - (diff - 1) / 9.0))
+    # números com letras (ex.: "12a"): similaridade textual, mas limitada à
+    # faixa "diferente/próximo" para não simular igualdade.
+    return min(45.0, float(fuzz.ratio(a, b)))
 
 
 def _zip_similarity(a: str, b: str) -> float:
