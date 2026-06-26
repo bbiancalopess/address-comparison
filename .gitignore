@@ -1,0 +1,11 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+
+# Saídas geradas
+data/results.csv
+# data/membership_functions.png é versionado de propósito: o README o exibe.

@@ -1,0 +1,24 @@
+# Núcleo do sistema fuzzy
+scikit-fuzzy>=0.4.2
+networkx>=3.0
+numpy>=1.26
+scipy>=1.11
+
+# Similaridade de strings
+rapidfuzz>=3.6
+
+# Manipulação de dados / comparação em lote
+pandas>=2.1
+
+# API REST
+fastapi>=0.110
+uvicorn[standard]>=0.29
+pydantic>=2.6
+
+# Interface opcional e gráficos
+streamlit>=1.32
+matplotlib>=3.8
+
+# Testes
+pytest>=8.0
+httpx>=0.27   # usado pelo TestClient do FastAPI
